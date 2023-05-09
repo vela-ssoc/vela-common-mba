@@ -1,4 +1,4 @@
-module github.com/ssoc/vela-common-mba
+module github.com/vela-ssoc/vela-common-mba
 
 go 1.20
 
