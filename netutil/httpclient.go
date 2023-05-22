@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime"
 	"net/http"
 	"time"
 )
@@ -58,12 +59,27 @@ func (c HTTPClient) SilentJSON(ctx context.Context, method, addr string, req any
 	return err
 }
 
-// DoJSONTimeout 超时控制发送请求
-func (c HTTPClient) DoJSONTimeout(timeout time.Duration, method, addr string, body, resp any, header http.Header) error {
+// JSONTimeout 超时控制发送请求
+func (c HTTPClient) JSONTimeout(timeout time.Duration, method, addr string, body, resp any, header http.Header) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	err := c.JSON(ctx, method, addr, body, resp, header)
 	cancel()
 	return err
+}
+
+// Attachment 下载文件/附件
+func (c HTTPClient) Attachment(ctx context.Context, method, addr string, body io.Reader, header http.Header) (Attachment, error) {
+	resp, err := c.fetch(ctx, method, addr, body, header)
+	if err != nil {
+		return Attachment{}, err
+	}
+	att := Attachment{code: resp.StatusCode, rc: resp.Body}
+	cd := resp.Header.Get("Content-Disposition")
+	if _, params, _ := mime.ParseMediaType(cd); params != nil {
+		att.Filename = params["filename"]
+		att.Checksum = params["checksum"]
+	}
+	return att, nil
 }
 
 // NewRequest 构造 http.Request
