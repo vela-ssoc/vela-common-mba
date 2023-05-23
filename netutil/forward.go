@@ -13,6 +13,9 @@ func NewForward(trip http.RoundTripper, errFn func(http.ResponseWriter, *http.Re
 	px := &httputil.ReverseProxy{
 		Transport:    trip,
 		ErrorHandler: errFn,
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetXForwarded()
+		},
 	}
 	return &forward{
 		px: px,
