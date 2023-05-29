@@ -7,44 +7,46 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func SocketPipe(a, b *websocket.Conn) {
-	p := &socketPipe{a: a, b: b}
-	p.running()
+func TwoSockPIPE(a, b *websocket.Conn) {
+	p := &twoSock{a: a, b: b}
+	p.exchange()
 }
 
-type socketPipe struct {
-	a *websocket.Conn
-	b *websocket.Conn
+type twoSock struct {
+	a, b *websocket.Conn
 }
 
-func (p *socketPipe) running() {
-	defer func() {
-		_ = p.a.Close()
-		_ = p.b.Close()
-	}()
-
-	go p.pipeline(p.a, p.b)
-	p.pipeline(p.b, p.a)
+func (ts *twoSock) exchange() {
+	defer ts.close()
+	go ts.writeTo(ts.b, ts.a)
+	ts.writeTo(ts.a, ts.b)
 }
 
-func (p *socketPipe) pipeline(a, b *websocket.Conn) {
+func (ts *twoSock) writeTo(dst, src *websocket.Conn) {
 	buf := make([]byte, 1024)
 	for {
-		mt, r, err := a.NextReader()
+		mt, rd, err := src.NextReader()
 		if err != nil {
+			_ = dst.Close()
 			break
 		}
-		w, err := b.NextWriter(mt)
+		wt, err := dst.NextWriter(mt)
 		if err != nil {
+			_ = src.Close()
 			break
 		}
-
-		_, _ = io.CopyBuffer(w, r, buf)
-		_ = w.Close()
+		if _, err = io.CopyBuffer(wt, rd, buf); err != nil {
+			break
+		}
 	}
 }
 
-func ConnPIPE(c net.Conn, w *websocket.Conn) {
+func (ts *twoSock) close() {
+	_ = ts.a.Close()
+	_ = ts.b.Close()
+}
+
+func ConnSockPIPE(c net.Conn, w *websocket.Conn) {
 	pp := &connPIPE{conn: c, sock: w}
 	pp.serve()
 }
