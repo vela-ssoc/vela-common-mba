@@ -32,5 +32,17 @@ type stream struct {
 }
 
 func (stm *stream) Stream(ctx context.Context, addr string, header http.Header) (*websocket.Conn, *http.Response, error) {
-	return stm.sock.DialContext(ctx, addr, header)
+	conn, res, err := stm.sock.DialContext(ctx, addr, header)
+	if err == nil || res == nil {
+		return conn, res, err
+	}
+
+	buf := make([]byte, 4096)
+	code := res.StatusCode
+	n, _ := res.Body.Read(buf)
+	_ = res.Body.Close()
+
+	exx := &HTTPError{Code: code, Body: buf[:n]}
+
+	return nil, nil, exx
 }
