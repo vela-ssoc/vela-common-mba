@@ -38,6 +38,7 @@ func (ts *twoSock) writeTo(dst, src *websocket.Conn) {
 		if _, err = io.CopyBuffer(wt, rd, buf); err != nil {
 			break
 		}
+		_ = wt.Close()
 	}
 }
 
