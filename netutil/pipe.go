@@ -2,6 +2,7 @@ package netutil
 
 import (
 	"io"
+	"net"
 
 	"github.com/gorilla/websocket"
 )
@@ -41,4 +42,60 @@ func (p *socketPipe) pipeline(a, b *websocket.Conn) {
 		_, _ = io.CopyBuffer(w, r, buf)
 		_ = w.Close()
 	}
+}
+
+func ConnPIPE(c net.Conn, w *websocket.Conn) {
+	pp := &connPIPE{conn: c, sock: w}
+	pp.serve()
+}
+
+type connPIPE struct {
+	conn net.Conn
+	sock *websocket.Conn
+}
+
+func (pe *connPIPE) serve() {
+	defer pe.close()
+
+	go pe.connToSock()
+
+	buf := make([]byte, 1024)
+	for {
+		_, rd, err := pe.sock.NextReader()
+		if err != nil {
+			_ = pe.conn.Close()
+			break
+		}
+		n, err := rd.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				continue
+			}
+			break
+		}
+
+		if _, err = pe.conn.Write(buf[:n]); err != nil {
+			_ = pe.sock.Close()
+		}
+	}
+}
+
+func (pe *connPIPE) connToSock() {
+	buf := make([]byte, 1024)
+	for {
+		n, err := pe.conn.Read(buf)
+		if err != nil {
+			_ = pe.sock.Close()
+			break
+		}
+		if err = pe.sock.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
+			_ = pe.conn.Close()
+			break
+		}
+	}
+}
+
+func (pe *connPIPE) close() {
+	_ = pe.conn.Close()
+	_ = pe.sock.Close()
 }
