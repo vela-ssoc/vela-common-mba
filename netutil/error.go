@@ -8,12 +8,13 @@ import (
 
 // HTTPError 返回错误
 type HTTPError struct {
-	Code int    `json:"code"` // http 返回的 状态码
-	Body []byte `json:"body"` // http body，最多 1024 字节
+	Code   int         `json:"code"`   // http 返回的 状态码
+	Header http.Header `json:"header"` // Header
+	Body   []byte      `json:"body"`   // http body，最多 1024 字节
 }
 
 func (e *HTTPError) Error() string {
-	return fmt.Sprintf("httpx client response status %d, message is: %s", e.Code, e.Body)
+	return fmt.Sprintf("httpclient 请求成功但是响应错误，状态码：%d, 报文：%s，Header：%s", e.Code, e.Body, e.Header)
 }
 
 func (e *HTTPError) NotAcceptable() bool {

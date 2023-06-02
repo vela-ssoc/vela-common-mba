@@ -153,8 +153,9 @@ func (c HTTPClient) fetch(ctx context.Context, method string, addr string, body 
 	buf := make([]byte, 1024)
 	n, _ := io.ReadFull(res.Body, buf)
 	err = &HTTPError{
-		Code: code,
-		Body: buf[:n],
+		Code:   code,
+		Header: header,
+		Body:   buf[:n],
 	}
 
 	return nil, err
