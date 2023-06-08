@@ -1,6 +1,9 @@
 package steganography
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type MinionHide struct {
 	Servername string    `json:"servername"`
@@ -10,4 +13,12 @@ type MinionHide struct {
 	Hash       string    `json:"hash"`
 	Size       int64     `json:"size"`
 	DownloadAt time.Time `json:"download_at"`
+}
+
+func (m MinionHide) String() string {
+	raw, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(raw)
 }
