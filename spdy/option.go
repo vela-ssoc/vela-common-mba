@@ -3,17 +3,25 @@ package spdy
 import (
 	"context"
 	"net"
+	"time"
 )
 
 type option struct {
 	maxsize  int
 	backlog  int
+	interval time.Duration
 	capacity int
 	server   bool
 	passwd   []byte
 }
 
 type Option func(*option)
+
+func WithReadTimout(du time.Duration) Option {
+	return func(opt *option) {
+		opt.interval = du
+	}
+}
 
 func WithBacklog(n int) Option {
 	return func(opt *option) {
@@ -51,12 +59,13 @@ func (opt option) muxer(tran net.Conn) *muxer {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	mux := &muxer{
-		tran:    tran,
-		streams: make(map[uint32]*stream, capacity),
-		accepts: make(chan *stream, backlog),
-		passwd:  opt.passwd,
-		ctx:     ctx,
-		cancel:  cancel,
+		tran:     tran,
+		interval: opt.interval,
+		streams:  make(map[uint32]*stream, capacity),
+		accepts:  make(chan *stream, backlog),
+		passwd:   opt.passwd,
+		ctx:      ctx,
+		cancel:   cancel,
 	}
 	if opt.server {
 		mux.stmID.Add(1)

@@ -6,20 +6,22 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type muxer struct {
-	wmu     sync.Mutex
-	tran    net.Conn
-	stmID   atomic.Uint32
-	mutex   sync.RWMutex
-	streams map[uint32]*stream
-	accepts chan *stream
-	passwd  []byte
-	pwn     int
-	prn     int
-	ctx     context.Context
-	cancel  context.CancelFunc
+	wmu      sync.Mutex
+	tran     net.Conn
+	interval time.Duration
+	stmID    atomic.Uint32
+	mutex    sync.RWMutex
+	streams  map[uint32]*stream
+	accepts  chan *stream
+	passwd   []byte
+	pwn      int
+	prn      int
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 func (mux *muxer) Addr() net.Addr       { return mux.LocalAddr() }
@@ -191,6 +193,9 @@ func (mux *muxer) write(flag uint8, sid uint32, p []byte) (int, error) {
 
 // readFull 读取消息
 func (mux *muxer) readFull(data []byte) error {
+	if inter := mux.interval; inter > time.Second {
+		_ = mux.tran.SetReadDeadline(time.Now().Add(inter))
+	}
 	if _, err := io.ReadFull(mux.tran, data); err != nil {
 		return err
 	}
