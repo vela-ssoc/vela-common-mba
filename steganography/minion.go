@@ -10,8 +10,9 @@ type MinionHide struct {
 	LAN        []string  `json:"lan"`
 	VIP        []string  `json:"vip"`
 	Edition    string    `json:"edition"`
-	Hash       string    `json:"hash"`
-	Size       int64     `json:"size"`
+	Hash       string    `json:"hash"` // 原始二进制的哈希（不含隐写内容）
+	Size       int64     `json:"size"` // 原始二进制文件大小（不含隐写内容）
+	Tags       []string  `json:"tags"` // 通过链接下载时的一些标记
 	DownloadAt time.Time `json:"download_at"`
 }
 
