@@ -1,4 +1,4 @@
-package steganography
+package definition
 
 import (
 	"encoding/json"
