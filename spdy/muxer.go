@@ -131,6 +131,7 @@ func (mux *muxer) read() {
 	defer func() {
 		recover()
 		_ = mux.Close()
+		mux.cancel()
 		close(mux.accepts)
 	}()
 
@@ -138,7 +139,6 @@ func (mux *muxer) read() {
 	for {
 		err := mux.readFull(header[:])
 		if err != nil {
-			_ = mux.Close()
 			break
 		}
 
@@ -155,7 +155,7 @@ func (mux *muxer) read() {
 			stm = mux.getStream(stmID)
 		}
 		if stm == nil {
-			continue
+			break
 		}
 
 		if flag == flagFIN {
