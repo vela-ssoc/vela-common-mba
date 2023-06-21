@@ -482,22 +482,12 @@ func (s *Stream) sessionClose() { s.dieOnce.Do(func() { close(s.die) }) }
 
 // LocalAddr satisfies net.Conn interface
 func (s *Stream) LocalAddr() net.Addr {
-	if ts, ok := s.sess.conn.(interface {
-		LocalAddr() net.Addr
-	}); ok {
-		return ts.LocalAddr()
-	}
-	return nil
+	return s.sess.LocalAddr()
 }
 
 // RemoteAddr satisfies net.Conn interface
 func (s *Stream) RemoteAddr() net.Addr {
-	if ts, ok := s.sess.conn.(interface {
-		RemoteAddr() net.Addr
-	}); ok {
-		return ts.RemoteAddr()
-	}
-	return nil
+	return s.sess.RemoteAddr()
 }
 
 // pushBytes append buf to buffers

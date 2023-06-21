@@ -87,24 +87,24 @@ func VerifyConfig(config *Config) error {
 }
 
 // Server is used to initialize a new server-side connection.
-func Server(conn net.Conn, config *Config) (*Session, error) {
+func Server(conn net.Conn, config *Config) *Session {
 	if config == nil {
 		config = DefaultConfig()
 	}
-	if err := VerifyConfig(config); err != nil {
-		return nil, err
-	}
-	return newSession(config, conn, false), nil
+	//if err := VerifyConfig(config); err != nil {
+	//	return nil, err
+	//}
+	return newSession(config, conn, false)
 }
 
 // Client is used to initialize a new client-side connection.
-func Client(conn net.Conn, config *Config) (*Session, error) {
+func Client(conn net.Conn, config *Config) *Session {
 	if config == nil {
 		config = DefaultConfig()
 	}
 
-	if err := VerifyConfig(config); err != nil {
-		return nil, err
-	}
-	return newSession(config, conn, true), nil
+	//if err := VerifyConfig(config); err != nil {
+	//	return nil, err
+	//}
+	return newSession(config, conn, true)
 }

@@ -283,22 +283,12 @@ func (s *Session) SetDeadline(t time.Time) error {
 
 // LocalAddr satisfies net.Conn interface
 func (s *Session) LocalAddr() net.Addr {
-	if ts, ok := s.conn.(interface {
-		LocalAddr() net.Addr
-	}); ok {
-		return ts.LocalAddr()
-	}
-	return nil
+	return s.conn.LocalAddr()
 }
 
 // RemoteAddr satisfies net.Conn interface
 func (s *Session) RemoteAddr() net.Addr {
-	if ts, ok := s.conn.(interface {
-		RemoteAddr() net.Addr
-	}); ok {
-		return ts.RemoteAddr()
-	}
-	return nil
+	return s.conn.RemoteAddr()
 }
 
 // notify the session that a stream has closed
