@@ -47,7 +47,7 @@ type writeResult struct {
 
 // Session defines a multiplexed connection for streams
 type Session struct {
-	conn io.ReadWriteCloser
+	conn net.Conn
 
 	config           *Config
 	nextStreamID     uint32 // next stream identifier
@@ -88,7 +88,7 @@ type Session struct {
 	writes    chan writeRequest
 }
 
-func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
+func newSession(config *Config, conn net.Conn, client bool) *Session {
 	s := new(Session)
 	s.die = make(chan struct{})
 	s.conn = conn
@@ -116,6 +116,10 @@ func newSession(config *Config, conn io.ReadWriteCloser, client bool) *Session {
 		go s.keepalive()
 	}
 	return s
+}
+
+func (s *Session) Addr() net.Addr {
+	return s.conn.LocalAddr()
 }
 
 // OpenStream is used to create a new stream
@@ -191,7 +195,7 @@ func (s *Session) AcceptStream() (*Stream, error) {
 }
 
 // Accept Returns a generic ReadWriteCloser instead of smux.Stream
-func (s *Session) Accept() (io.ReadWriteCloser, error) {
+func (s *Session) Accept() (net.Conn, error) {
 	return s.AcceptStream()
 }
 

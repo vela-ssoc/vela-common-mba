@@ -7,8 +7,8 @@ package smux
 import (
 	"errors"
 	"fmt"
-	"io"
 	"math"
+	"net"
 	"time"
 )
 
@@ -87,7 +87,7 @@ func VerifyConfig(config *Config) error {
 }
 
 // Server is used to initialize a new server-side connection.
-func Server(conn io.ReadWriteCloser, config *Config) (*Session, error) {
+func Server(conn net.Conn, config *Config) (*Session, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
@@ -98,7 +98,7 @@ func Server(conn io.ReadWriteCloser, config *Config) (*Session, error) {
 }
 
 // Client is used to initialize a new client-side connection.
-func Client(conn io.ReadWriteCloser, config *Config) (*Session, error) {
+func Client(conn net.Conn, config *Config) (*Session, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
