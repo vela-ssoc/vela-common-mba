@@ -1,14 +1,13 @@
 package smux
 
 import (
+	"context"
 	"encoding/binary"
 	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // Stream implements net.Conn
