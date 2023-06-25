@@ -2,6 +2,7 @@ package smux
 
 import (
 	"container/heap"
+	"context"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -184,7 +185,7 @@ func (s *Session) AcceptStream() (*Stream, error) {
 	case stream := <-s.chAccepts:
 		return stream, nil
 	case <-deadline:
-		return nil, ErrTimeout
+		return nil, context.DeadlineExceeded
 	case <-s.chSocketReadError:
 		return nil, s.socketReadError.Load().(error)
 	case <-s.chProtoError:
@@ -535,7 +536,7 @@ func (s *Session) writeFrameInternal(f Frame, deadline <-chan time.Time, class C
 	case <-s.chSocketWriteError:
 		return 0, s.socketWriteError.Load().(error)
 	case <-deadline:
-		return 0, ErrTimeout
+		return 0, context.DeadlineExceeded
 	}
 
 	select {
@@ -546,6 +547,6 @@ func (s *Session) writeFrameInternal(f Frame, deadline <-chan time.Time, class C
 	case <-s.chSocketWriteError:
 		return 0, s.socketWriteError.Load().(error)
 	case <-deadline:
-		return 0, ErrTimeout
+		return 0, context.DeadlineExceeded
 	}
 }

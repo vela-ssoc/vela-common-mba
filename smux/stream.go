@@ -413,7 +413,7 @@ func (s *Stream) writeV2(b []byte) (n int, err error) {
 			case <-s.die:
 				return sent, io.ErrClosedPipe
 			case <-deadline:
-				return sent, ErrTimeout
+				return sent, context.DeadlineExceeded
 			case <-s.sess.chSocketWriteError:
 				return sent, s.sess.socketWriteError.Load().(error)
 			case <-s.chUpdate:
