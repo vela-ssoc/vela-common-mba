@@ -166,11 +166,6 @@ func (s *Session) OpenStream() (*Stream, error) {
 	}
 }
 
-// Open returns a generic ReadWriteCloser
-func (s *Session) Open() (io.ReadWriteCloser, error) {
-	return s.OpenStream()
-}
-
 // AcceptStream is used to block until the next available stream
 // is ready to be accepted.
 func (s *Session) AcceptStream() (*Stream, error) {
@@ -197,7 +192,11 @@ func (s *Session) AcceptStream() (*Stream, error) {
 
 // Accept Returns a generic ReadWriteCloser instead of smux.Stream
 func (s *Session) Accept() (net.Conn, error) {
-	return s.AcceptStream()
+	stream, err := s.AcceptStream()
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
 }
 
 // Close is used to close the session and all streams.
