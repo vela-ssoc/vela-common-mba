@@ -7,6 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 // Stream implements net.Conn
@@ -284,7 +286,7 @@ func (s *Stream) waitRead() error {
 	case <-s.sess.chProtoError:
 		return s.sess.protoError.Load().(error)
 	case <-deadline:
-		return ErrTimeout
+		return context.DeadlineExceeded
 	case <-s.die:
 		return io.ErrClosedPipe
 	}
