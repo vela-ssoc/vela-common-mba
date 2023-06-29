@@ -569,6 +569,14 @@ func (s *Session) readFull(b []byte) (int, error) {
 
 	n, err := io.ReadFull(s.conn, b)
 	if err != nil || n == 0 {
+		// Session 实现了 net.Listener 接口，但是很多服务端对 Accept() 的临时错误做了指数退避处理，
+		// 例如标准库的 http.Server：https://github.com/golang/go/blob/master/src/net/http/server.go#L3061-L3073。
+		// 在开发环境中发现临读取数据会出现临时错误，会导致上层服务不断的指数退避重新 Accept()。
+		//
+		if ope, ok := err.(*net.OpError); ok && (ope.Temporary() || ope.Timeout()) {
+			ope.Err = context.DeadlineExceeded
+			return 0, ope
+		}
 		return 0, err
 	}
 	passwd := s.config.Passwd
