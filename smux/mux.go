@@ -38,6 +38,8 @@ type Config struct {
 	// MaxStreamBuffer is used to control the maximum
 	// number of data per stream
 	MaxStreamBuffer int
+	ReadTimeout     time.Duration
+	Passwd          []byte
 }
 
 // DefaultConfig is used to return a default configuration
@@ -49,6 +51,7 @@ func DefaultConfig() *Config {
 		MaxFrameSize:      32768,
 		MaxReceiveBuffer:  4194304,
 		MaxStreamBuffer:   65536,
+		KeepAliveDisabled: true,
 	}
 }
 

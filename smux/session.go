@@ -87,6 +87,11 @@ type Session struct {
 	requestID uint32            // write request monotonic increasing
 	shaper    chan writeRequest // a shaper for writing
 	writes    chan writeRequest
+
+	rwn sync.Mutex
+	prn int
+	wmu sync.Mutex
+	pwn int
 }
 
 func newSession(config *Config, conn net.Conn, client bool) *Session {
@@ -209,8 +214,8 @@ func (s *Session) Close() error {
 
 	if once {
 		s.streamLock.Lock()
-		for k := range s.streams {
-			s.streams[k].sessionClose()
+		for _, c := range s.streams {
+			c.sessionClose()
 		}
 		s.streamLock.Unlock()
 		return s.conn.Close()
@@ -320,71 +325,74 @@ func (s *Session) recvLoop() {
 			select {
 			case <-s.bucketNotify:
 			case <-s.die:
-				return
+				break
 			}
 		}
 
 		// read header first
-		if _, err := io.ReadFull(s.conn, hdr[:]); err == nil {
-			atomic.StoreInt32(&s.dataReady, 1)
-			if hdr.Version() != byte(s.config.Version) {
-				s.notifyProtoError(ErrInvalidProtocol)
-				return
-			}
-			sid := hdr.StreamID()
-			switch hdr.Cmd() {
-			case cmdNOP:
-			case cmdSYN:
-				s.streamLock.Lock()
-				if _, ok := s.streams[sid]; !ok {
-					stream := newStream(sid, s.config.MaxFrameSize, s)
-					s.streams[sid] = stream
-					select {
-					case s.chAccepts <- stream:
-					case <-s.die:
-					}
+		if _, err := s.readFull(hdr[:]); err != nil {
+			s.notifyReadError(err)
+			break
+		}
+
+		atomic.StoreInt32(&s.dataReady, 1)
+		if hdr.Version() != byte(s.config.Version) {
+			s.notifyProtoError(ErrInvalidProtocol)
+			break
+		}
+
+		sid := hdr.StreamID()
+		switch hdr.Cmd() {
+		case cmdNOP:
+		case cmdSYN:
+			s.streamLock.Lock()
+			if _, ok := s.streams[sid]; !ok {
+				stream := newStream(sid, s.config.MaxFrameSize, s)
+				s.streams[sid] = stream
+				select {
+				case s.chAccepts <- stream:
+				case <-s.die:
 				}
-				s.streamLock.Unlock()
-			case cmdFIN:
+			}
+			s.streamLock.Unlock()
+		case cmdFIN:
+			s.streamLock.Lock()
+			if stream, ok := s.streams[sid]; ok {
+				stream.fin()
+				stream.notifyReadEvent()
+			}
+			s.streamLock.Unlock()
+		case cmdPSH:
+			if hdr.Length() == 0 {
+				continue
+			}
+
+			newbuf := defaultAllocator.Get(int(hdr.Length()))
+			if written, err := s.readFull(newbuf); err == nil {
 				s.streamLock.Lock()
 				if stream, ok := s.streams[sid]; ok {
-					stream.fin()
+					stream.pushBytes(newbuf)
+					atomic.AddInt32(&s.bucket, -int32(written))
 					stream.notifyReadEvent()
 				}
 				s.streamLock.Unlock()
-			case cmdPSH:
-				if hdr.Length() > 0 {
-					newbuf := defaultAllocator.Get(int(hdr.Length()))
-					if written, err := io.ReadFull(s.conn, newbuf); err == nil {
-						s.streamLock.Lock()
-						if stream, ok := s.streams[sid]; ok {
-							stream.pushBytes(newbuf)
-							atomic.AddInt32(&s.bucket, -int32(written))
-							stream.notifyReadEvent()
-						}
-						s.streamLock.Unlock()
-					} else {
-						s.notifyReadError(err)
-						return
-					}
-				}
-			case cmdUPD:
-				if _, err := io.ReadFull(s.conn, updHdr[:]); err == nil {
-					s.streamLock.Lock()
-					if stream, ok := s.streams[sid]; ok {
-						stream.update(updHdr.Consumed(), updHdr.Window())
-					}
-					s.streamLock.Unlock()
-				} else {
-					s.notifyReadError(err)
-					return
-				}
-			default:
-				s.notifyProtoError(ErrInvalidProtocol)
+			} else {
+				s.notifyReadError(err)
 				return
 			}
-		} else {
-			s.notifyReadError(err)
+		case cmdUPD:
+			if _, err := s.readFull(updHdr[:]); err == nil {
+				s.streamLock.Lock()
+				if stream, ok := s.streams[sid]; ok {
+					stream.update(updHdr.Consumed(), updHdr.Window())
+				}
+				s.streamLock.Unlock()
+			} else {
+				s.notifyReadError(err)
+				return
+			}
+		default:
+			s.notifyProtoError(ErrInvalidProtocol)
 			return
 		}
 	}
@@ -489,7 +497,8 @@ func (s *Session) sendLoop() {
 				n, err = bw.WriteBuffers(vec)
 			} else {
 				copy(buf[headerSize:], request.frame.data)
-				n, err = s.conn.Write(buf[:headerSize+len(request.frame.data)])
+				// n, err = s.conn.Write(buf[:headerSize+len(request.frame.data)])
+				n, err = s.write(buf[:headerSize+len(request.frame.data)])
 			}
 
 			n -= headerSize
@@ -548,4 +557,48 @@ func (s *Session) writeFrameInternal(f Frame, deadline <-chan time.Time, class C
 	case <-deadline:
 		return 0, context.DeadlineExceeded
 	}
+}
+
+func (s *Session) readFull(b []byte) (int, error) {
+	if du := s.config.ReadTimeout; du > 0 {
+		_ = s.conn.SetReadDeadline(time.Now().Add(du))
+	}
+
+	s.rwn.Lock()
+	defer s.rwn.Unlock()
+
+	n, err := io.ReadFull(s.conn, b)
+	if err != nil || n == 0 {
+		return 0, err
+	}
+	passwd := s.config.Passwd
+	if psz := len(passwd); psz != 0 {
+		prn := s.prn
+		for i, dat := range b {
+			prn = (prn + 1) % psz
+			enc := passwd[prn]
+			b[i] = dat ^ enc
+		}
+		s.prn = prn
+	}
+
+	return n, nil
+}
+
+func (s *Session) write(dats []byte) (int, error) {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+
+	passwd := s.config.Passwd
+	if psz := len(passwd); psz != 0 {
+		pwn := s.pwn
+		for i, dat := range dats {
+			pwn = (pwn + 1) % psz
+			enc := passwd[pwn]
+			dats[i] = dat ^ enc
+		}
+		s.pwn = pwn
+	}
+
+	return s.conn.Write(dats)
 }
