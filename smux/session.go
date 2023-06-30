@@ -574,7 +574,7 @@ func (s *Session) readFull(b []byte) (int, error) {
 		// 在开发环境中发现临读取数据会出现临时错误，会导致上层服务不断的指数退避重新 Accept()。
 		//
 		if ope, ok := err.(*net.OpError); ok && (ope.Temporary() || ope.Timeout()) {
-			ope.Err = context.DeadlineExceeded
+			ope.Err = io.ErrUnexpectedEOF
 			return 0, ope
 		}
 		return 0, err
