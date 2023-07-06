@@ -163,10 +163,12 @@ func (c HTTPClient) fetch(ctx context.Context, method string, addr string, body 
 
 // toJSON 转为 JSON
 func (HTTPClient) toJSON(v any) (io.Reader, error) {
-	if v == nil {
-		return nil, nil
-	}
 	buf := new(bytes.Buffer)
+	if v == nil {
+		// 当数据为空或为 nil 时要传 null，不要传空字符串或空 []byte
+		buf.WriteString("null")
+		return buf, nil
+	}
 	if err := json.NewEncoder(buf).Encode(v); err != nil {
 		return nil, err
 	}
