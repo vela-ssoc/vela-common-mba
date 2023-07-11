@@ -14,7 +14,7 @@ type HTTPError struct {
 }
 
 func (e *HTTPError) Error() string {
-	return fmt.Sprintf("httpclient 请求成功但是响应错误，状态码：%d, 报文：%s，Header：%s", e.Code, e.Body, e.Header)
+	return fmt.Sprintf("httpclient 请求成功但是响应错误，状态码：%d, 报文：%s", e.Code, e.Body)
 }
 
 func (e *HTTPError) NotAcceptable() bool {
