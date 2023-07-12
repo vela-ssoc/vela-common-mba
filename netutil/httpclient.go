@@ -121,7 +121,7 @@ func (c HTTPClient) fetch(ctx context.Context, method string, addr string, body 
 
 	encoding := "Accept-Encoding"
 	if req.Header.Get(encoding) == "" {
-		req.Header.Set("Accept-Encoding", "gzip, deflate")
+		req.Header.Set(encoding, "gzip, deflate")
 	}
 	res, err := c.cli.Do(req)
 	if err != nil {
