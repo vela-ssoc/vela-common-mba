@@ -59,6 +59,11 @@ func (c HTTPClient) SilentJSON(ctx context.Context, method, addr string, req any
 	return err
 }
 
+// DoJSON 发送 JSON
+func (c HTTPClient) DoJSON(ctx context.Context, method, addr string, req any, header http.Header) (*http.Response, error) {
+	return c.doJSON(ctx, method, addr, req, header)
+}
+
 // JSONTimeout 超时控制发送请求
 func (c HTTPClient) JSONTimeout(timeout time.Duration, method, addr string, body, resp any, header http.Header) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
