@@ -104,21 +104,26 @@ func (c HTTPClient) NewRequest(ctx context.Context, method string, addr string, 
 }
 
 func (c HTTPClient) doJSON(ctx context.Context, method, addr string, body any, header http.Header) (*http.Response, error) {
-	rd, err := c.toJSON(body)
-	if err != nil {
-		return nil, err
+	var read io.Reader
+	if method != http.MethodGet && method != http.MethodHead {
+		rd, err := c.toJSON(body)
+		if err != nil {
+			return nil, err
+		}
+		body = rd
 	}
+
 	if header == nil {
 		header = make(http.Header, 4)
 	}
 	header.Set("Accept", "application/json")
 	header.Set("Content-Type", "application/json; charset=utf-8")
 
-	return c.fetch(ctx, method, addr, rd, header)
+	return c.fetch(ctx, method, addr, read, header)
 }
 
 // fetch 发送请求
-func (c HTTPClient) fetch(ctx context.Context, method string, addr string, body io.Reader, header http.Header) (*http.Response, error) {
+func (c HTTPClient) fetch(ctx context.Context, method, addr string, body io.Reader, header http.Header) (*http.Response, error) {
 	req, err := c.NewRequest(ctx, method, addr, body, header)
 	if err != nil {
 		return nil, err
