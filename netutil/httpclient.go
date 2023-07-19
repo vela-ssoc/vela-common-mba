@@ -110,7 +110,7 @@ func (c HTTPClient) doJSON(ctx context.Context, method, addr string, body any, h
 		if err != nil {
 			return nil, err
 		}
-		body = rd
+		read = rd
 	}
 
 	if header == nil {
