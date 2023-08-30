@@ -30,7 +30,7 @@ func NewClient(trip ...http.RoundTripper) HTTPClient {
 }
 
 func (c HTTPClient) Do(req *http.Request) (*http.Response, error) {
-	return c.cli.Do(req)
+	return c.do(req)
 }
 
 // Fetch 发送请求
@@ -124,9 +124,23 @@ func (c HTTPClient) doJSON(ctx context.Context, method, addr string, body any, h
 
 // fetch 发送请求
 func (c HTTPClient) fetch(ctx context.Context, method, addr string, body io.Reader, header http.Header) (*http.Response, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	req, err := c.NewRequest(ctx, method, addr, body, header)
 	if err != nil {
 		return nil, err
+	}
+
+	return c.do(req)
+}
+
+func (c HTTPClient) do(req *http.Request) (*http.Response, error) {
+	if req.Header == nil {
+		req.Header = make(http.Header, 4)
+	}
+	if host := req.Header.Get("Host"); host != "" && req.Host == "" {
+		req.Host = host
 	}
 
 	encoding := "Accept-Encoding"
@@ -164,7 +178,7 @@ func (c HTTPClient) fetch(ctx context.Context, method, addr string, body io.Read
 	n, _ := io.ReadFull(res.Body, buf)
 	err = &HTTPError{
 		Code:   code,
-		Header: header,
+		Header: res.Header,
 		Body:   buf[:n],
 	}
 
