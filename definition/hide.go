@@ -5,31 +5,6 @@ import (
 	"time"
 )
 
-type MinionHide struct {
-	Servername string    `json:"servername"`
-	LAN        []string  `json:"lan"`
-	VIP        []string  `json:"vip"`
-	Edition    string    `json:"edition"`     // 版本，即将废弃。
-	Semver     string    `json:"semver"`      // 版本
-	Hash       string    `json:"hash"`        // 原始二进制的哈希（不含隐写内容）
-	Size       int64     `json:"size"`        // 原始二进制文件大小（不含隐写内容）
-	Tags       []string  `json:"tags"`        // 通过链接下载时的一些标记
-	Unload     bool      `json:"unload"`      // 不加载任何配置，仅在节点注册时生效
-	Goos       string    `json:"goos"`        // GOOS
-	Arch       string    `json:"arch"`        // GOARCH
-	Unstable   bool      `json:"unstable"`    // 测试版标记
-	Customized string    `json:"customized"`  // 定制版本标记
-	DownloadAt time.Time `json:"download_at"` // 下载时间
-}
-
-func (m MinionHide) String() string {
-	raw, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err.Error()
-	}
-	return string(raw)
-}
-
 type MHide struct {
 	// Servername 服务端域名。
 	// 此处有两个作用：
@@ -85,4 +60,12 @@ type MHide struct {
 	//
 	// Deprecated: use Semver.
 	Edition string `json:"edition"`
+}
+
+func (m MHide) String() string {
+	raw, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(raw)
 }
