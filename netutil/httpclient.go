@@ -2,8 +2,6 @@ package netutil
 
 import (
 	"bytes"
-	"compress/flate"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"io"
@@ -104,6 +102,11 @@ func (c HTTPClient) NewRequest(ctx context.Context, method string, addr string, 
 }
 
 func (c HTTPClient) doJSON(ctx context.Context, method, addr string, body any, header http.Header) (*http.Response, error) {
+	if header == nil {
+		header = make(http.Header, 4)
+	}
+	header.Set("Accept", "application/json")
+
 	var read io.Reader
 	if method != http.MethodGet && method != http.MethodHead {
 		rd, err := c.toJSON(body)
@@ -111,13 +114,8 @@ func (c HTTPClient) doJSON(ctx context.Context, method, addr string, body any, h
 			return nil, err
 		}
 		read = rd
+		header.Set("Content-Type", "application/json; charset=utf-8")
 	}
-
-	if header == nil {
-		header = make(http.Header, 4)
-	}
-	header.Set("Accept", "application/json")
-	header.Set("Content-Type", "application/json; charset=utf-8")
 
 	return c.fetch(ctx, method, addr, read, header)
 }
@@ -142,29 +140,14 @@ func (c HTTPClient) do(req *http.Request) (*http.Response, error) {
 	if host := req.Header.Get("Host"); host != "" && req.Host == "" {
 		req.Host = host
 	}
-
-	encoding := "Accept-Encoding"
-	if req.Header.Get(encoding) == "" {
-		req.Header.Set(encoding, "gzip, deflate")
+	if req.Header.Get("User-Agent") == "" {
+		chrome126 := "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+		req.Header.Set("User-Agent", chrome126)
 	}
+
 	res, err := c.cli.Do(req)
 	if err != nil {
 		return nil, err
-	}
-	resp := res.Body
-	if resp != nil && resp != http.NoBody {
-		switch res.Header.Get("Content-Encoding") {
-		case "gzip":
-			gr, ex := gzip.NewReader(resp)
-			if ex != nil {
-				_ = resp.Close()
-				return nil, ex
-			}
-			res.Body = gr
-		case "deflate":
-			fr := flate.NewReader(resp)
-			res.Body = fr
-		}
 	}
 
 	code := res.StatusCode
