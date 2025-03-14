@@ -1,4 +1,4 @@
-package ssoccommonmba
+package velacommonmba
 
 import "github.com/gorilla/websocket"
 
