@@ -6,6 +6,9 @@ import (
 )
 
 type MHide struct {
+	// MachineID 机器码，节点的唯一标识。
+	MachineID string `json:"machine_id"`
+
 	// Servername 服务端域名。
 	// 此处有两个作用：
 	// 		TLS 连接下，用于证书认证校验。
