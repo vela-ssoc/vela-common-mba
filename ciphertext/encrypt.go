@@ -6,12 +6,7 @@ import (
 	"encoding/json"
 	"hash/adler32"
 	"math/rand"
-	"time"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // Encrypt 加密
 func Encrypt(raw []byte) []byte {
